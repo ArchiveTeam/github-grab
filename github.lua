@@ -306,7 +306,6 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
       io.stdout:flush()
       tries = 0
       if allowed(url["url"], nil) then
-        io.open("BANNED", "w"):close()
         return wget.actions.ABORT
       else
         return wget.actions.EXIT
