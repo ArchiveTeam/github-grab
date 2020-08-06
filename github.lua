@@ -42,6 +42,7 @@ allowed = function(url, parenturl)
   if string.match(url, "'+")
     or string.match(url, "[<>\\%*%$;%^%[%],%(%){}]")
     or string.match(url, "/hovercard$")
+    or string.match(url, "/hovercard%?")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/blob/")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/tree/")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/tree%-list/")
@@ -67,6 +68,13 @@ allowed = function(url, parenturl)
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/issues/[0-9]+/set_milestone")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pulls/[0-9]+/set_milestone")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pulls/?[^%?]")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/runs/[0-9]+/toolbar")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/runs/[0-9]+/header")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/runs/[0-9]+/unseen_check_steps")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/runs/[0-9]+/step_summary")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/suites/[0-9]+/show_partial%?check_suite_focus=")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/actions/workflow%-run/[0-9]+$")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/actions/runs/[0-9]+/workflow_run$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/files")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/checks%?sha=")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/show_partial")
@@ -87,6 +95,9 @@ allowed = function(url, parenturl)
   end
 
   local match = string.match(url, "^https?://github%.com/[^/]+/[^/]+/[^/]+/?%?q=(.+%%3A.+)")
+  if not match then
+    match = string.match(url, "^https?://github%.com/[^/]+/[^/]+/[^/]+/?%?query=(.+%%3A.+)")
+  end
   if match then
     for s in string.gmatch(match, "([a-z%-]+)%%3A") do
       if s ~= "is" then
