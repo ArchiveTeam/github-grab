@@ -54,7 +54,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20200806.01'
+VERSION = '20200806.02'
 USER_AGENT = 'Archive Team'
 TRACKER_ID = 'githubtest'
 TRACKER_HOST = 'trackerproxy.meo.ws'
@@ -238,6 +238,7 @@ class WgetArgs(object):
         if item_type == 'web':
             wget_args.extend(['--warc-header', 'github-repo-web: ' + str(item_value)])
             wget_args.append('https://github.com/{}'.format(item_value))
+            wget_args.append('https://{}.github.io/{}/'.format(*item_value.split('/', 1)))
 
         if 'bind_address' in globals():
             wget_args.extend(['--bind-address', globals()['bind_address']])

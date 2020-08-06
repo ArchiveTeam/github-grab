@@ -90,6 +90,7 @@ allowed = function(url, parenturl)
     or not (
       string.match(url, "^https?://[^/]*github%.com/")
       or string.match(url, "^https?://[^/]*githubusercontent%.com/")
+      or string.match(url, "^https?://[^/]*github%.io/")
     ) then
     return false
   end
@@ -118,6 +119,11 @@ allowed = function(url, parenturl)
   end
 
   if string.match(url, "^https?://[^/]*githubusercontent%.com/.") then
+    return true
+  end
+
+  local a, b = string.match(url, "^https?://([^%.]+)%.github%.io/([0-9a-zA-Z%-%._]+)")
+  if a and b and a .. "/" .. b == item_value then
     return true
   end
 
