@@ -14,6 +14,7 @@ local abortgrab = false
 
 local latest_hovercard = nil
 local is_fork = nil
+local is_site = nil
 local allowed_archive = {}
 
 for ignore in io.open("ignore-list", "r"):lines() do
@@ -92,7 +93,8 @@ allowed = function(url, parenturl)
     or not (
       string.match(url, "^https?://[^/]*github%.com/")
       or string.match(url, "^https?://[^/]*githubusercontent%.com/")
-      or string.match(url, "^https?://[^/]*github%.io/")
+      or string.match(url, "^https?://[^/]*github%.io")
+      or string.match(url, "^https?://[^/]*amazonaws%.com/")
     ) then
     return false
   end
@@ -150,12 +152,17 @@ allowed = function(url, parenturl)
     end
   end]]
 
-  if string.match(url, "^https?://[^/]*githubusercontent%.com/.") then
+  if string.match(url, "^https?://[^/]*githubusercontent%.com/.")
+    or string.match(url, "^https?://[^/]+amazonaws%.com/.") then
     return true
   end
 
-  local a, b = string.match(url, "^https?://([^%.]+)%.github%.io/([0-9a-zA-Z%-%._]+)")
-  if a and b and a .. "/" .. b == item_value then
+  local a, b = string.match(url, "^https?://([^%.]+)%.github%.io/?([0-9a-zA-Z%-%._]*)")
+  if (not is_site and a and b and a .. "/" .. b == item_value)
+    or (
+      is_site and a and b
+      and string.lower(a) == string.lower(string.match(item_value, "^([^/]+)"))
+    ) then
     return true
   end
 
@@ -269,6 +276,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       string.match(url, "^https?://codeload%.github%.com/")
       or string.match(url, "^https?://github%.com/[^/]+/[^/]+/network/dependents$")
       or string.match(url, "^https?://[^/]*githubusercontent%.com/")
+      or string.match(url, "^https?://[^/]+amazonaws%.com/")
     ) then
     html = read_file(file)
     find = string.match(html, '<meta[^>]+name="hovercard%-subject%-tag"[^>]+content="([^"]+)"')
@@ -286,7 +294,14 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       local a, b = string.match(item_value, "^([^/]+)/(.+)$")
       is_fork = json_data["fork"]
       check("https://github.com/" .. item_value)
-      check("https://" .. a .. ".github.io/" .. b .. "/")
+      if string.match(item_value, "^[^/]+/[^%.]+%.github%.io$")
+        and string.lower(a) == string.lower(string.match(item_value, "^[^/]+/([^%.]+)")) then
+        is_site = true
+        check("https://" .. b .. "/")
+      else
+        is_site = false
+        check("https://" .. a .. ".github.io/" .. b .. "/")
+      end
     elseif string.match(url, "^https?://github%.com/[^/]+/[^/]+/tags") then
       for s in string.gmatch(html, '<a%s+class="muted%-link"[^>]+href="/[^/]+/[^/]+/releases/tag/([^"]+)">[^<]+<svg[^>]+>%s*<path[^>]+>%s*</path>%s*</svg>%s*Notes%s*</a>') do
         allowed_archive[s] = true
@@ -336,6 +351,12 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
       newloc = string.match(url["url"], "^(https?://[^/]+)") .. newloc
     elseif not string.match(newloc, "^https?://") then
       newloc = string.match(url["url"], "^(https?://.+/)") .. newloc
+    end
+    if string.match(url["url"], "^https?://github%.com/[^/]+/[^/]+/releases/download/")
+      and not string.match(newloc, "^https?://[^/]*amazonaws%.com/") then
+      io.stdout:write("Found bad release download URL.\n")
+      io.stdout:flush()
+      abortgrab = true
     end
     if downloaded[newloc] == true or addedtolist[newloc] == true or not allowed(newloc, url["url"]) then
       tries = 0
