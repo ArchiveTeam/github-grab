@@ -13,7 +13,8 @@ local addedtolist = {}
 local abortgrab = false
 
 local latest_hovercard = nil
-local ids = {}
+local is_fork = nil
+local allowed_archive = {}
 
 for ignore in io.open("ignore-list", "r"):lines() do
   downloaded[ignore] = true
@@ -86,6 +87,7 @@ allowed = function(url, parenturl)
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/stargazers/you_know$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/fork$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/search$")
+    or string.match(url, "^https?://api%.github%.com/repos/[^/]+/[^/]+/.")
     or string.match(url, "^https?://avatars[0-9]*%.githubusercontent%.com/")
     or not (
       string.match(url, "^https?://[^/]*github%.com/")
@@ -93,6 +95,17 @@ allowed = function(url, parenturl)
       or string.match(url, "^https?://[^/]*github%.io/")
     ) then
     return false
+  end
+
+  local tested = {}
+  for s in string.gmatch(url, "([^/]+)") do
+    if tested[s] == nil then
+      tested[s] = 0
+    end
+    if tested[s] == 6 then
+      return false
+    end
+    tested[s] = tested[s] + 1
   end
 
   local match = string.match(url, "^https?://github%.com/[^/]+/[^/]+/[^/]+/?%?q=(.+%%3A.+)")
@@ -107,16 +120,35 @@ allowed = function(url, parenturl)
     end
   end
 
-  local tested = {}
-  for s in string.gmatch(url, "([^/]+)") do
-    if tested[s] == nil then
-      tested[s] = 0
-    end
-    if tested[s] == 6 then
+  if parenturl
+    and string.match(url, "^https?://github%.com/[^/]+/[^/]+/releases/tag/") then
+    if string.match(parenturl, "^https?://github%.com/[^/]+/[^/]+/tags") then
+      match = string.match(url, "^https?://github%.com/[^/]+/[^/]+/releases/tag/([^/%?]+)$")
+      if is_fork and not allowed_archive[match] then
+        return false
+      end
+    else
       return false
     end
-    tested[s] = tested[s] + 1
   end
+
+  if parenturl
+    and not string.match(parenturl, "^https?://github%.com/[^/]+/[^/]+/releases/tag/")
+    and string.match(url, "^https?://github%.com/[^/]+/[^/]+/archive/") then
+    return false
+  end
+
+--[[  if parenturl
+    and string.match(url, "^https?://github%.com/[^/]+/[^/]+/archive/") then
+    match = string.match(parenturl, "^https?://github%.com/[^/]+/[^/]+/releases/tag/([^/%?]+)$")
+    if match then
+      if is_fork and not allowed_archive[match] then
+        return false
+      end
+    else
+      return false
+    end
+  end]]
 
   if string.match(url, "^https?://[^/]*githubusercontent%.com/.") then
     return true
@@ -248,6 +280,19 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       local num = tonumber(string.match(url, "/([0-9]+)$"))
       for i=1,num do
         checknewshorturl(tostring(i))
+      end
+    elseif string.match(url, "^https?://api%.github%.com/repos/") then
+      local json_data = load_json_file(html)
+      local a, b = string.match(item_value, "^([^/]+)/(.+)$")
+      is_fork = json_data["fork"]
+      check("https://github.com/" .. item_value)
+      check("https://" .. a .. ".github.io/" .. b .. "/")
+    elseif string.match(url, "^https?://github%.com/[^/]+/[^/]+/tags") then
+      for s in string.gmatch(html, '<a%s+class="muted%-link"[^>]+href="/[^/]+/[^/]+/releases/tag/([^"]+)">[^<]+<svg[^>]+>%s*<path[^>]+>%s*</path>%s*</svg>%s*Notes%s*</a>') do
+        allowed_archive[s] = true
+      end
+      for s in string.gmatch(html, '<a%s+class="muted%-link"[^>]+href="/[^/]+/[^/]+/releases/tag/([^"]+)">[^<]+<svg[^>]+>%s*<path[^>]+>%s*</path>%s*</svg>%s*Downloads%s*</a>') do
+        allowed_archive[s] = true
       end
     end
     for newurl in string.gmatch(string.gsub(html, "&quot;", '"'), '([^"]+)') do
