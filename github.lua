@@ -15,6 +15,8 @@ local abortgrab = false
 local latest_hovercard = nil
 local is_fork = nil
 local is_site = nil
+local site = nil
+local site_escaped = nil
 local allowed_archive = {}
 
 for ignore in io.open("ignore-list", "r"):lines() do
@@ -95,6 +97,7 @@ allowed = function(url, parenturl)
       or string.match(url, "^https?://[^/]*githubusercontent%.com/")
       or string.match(url, "^https?://[^/]*github%.io")
       or string.match(url, "^https?://[^/]*amazonaws%.com/")
+--      or (site and string.match(string.lower(url), site_escaped))
     ) then
     return false
   end
@@ -150,6 +153,10 @@ allowed = function(url, parenturl)
     else
       return false
     end
+  end]]
+
+--[[  if site and string.lower(string.match(url, "^https?://([^/]+)")) == site then
+    return true
   end]]
 
   if string.match(url, "^https?://[^/]*githubusercontent%.com/.")
@@ -294,6 +301,18 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       local a, b = string.match(item_value, "^([^/]+)/(.+)$")
       is_fork = json_data["fork"]
       check("https://github.com/" .. item_value)
+--[[      if json_data["homepage"]
+        and not string.match(json_data["homepage"], "^https?://[^/]*github%.io/.") then
+        if string.match(json_data["homepage"], "^https?://[^/]+/.") then
+          io.stdout:write("Unsupported homepage found.\n")
+          io.stdout:flush()
+          abortgrab = true
+          return nil
+        end
+        site = string.lower(string.match(json_data["homepage"], "^https?://([^/]+)/?$"))
+        site_escaped = "^https?://" .. string.gsub(site, "([^%w])", "%%%1")
+        check(json_data["homepage"])
+      end]]
       if string.match(item_value, "^[^/]+/[^%.]+%.github%.io$")
         and string.lower(a) == string.lower(string.match(item_value, "^[^/]+/([^%.]+)")) then
         is_site = true
