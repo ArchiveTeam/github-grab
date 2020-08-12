@@ -1,7 +1,6 @@
 dofile("table_show.lua")
 dofile("urlcode.lua")
 JSON = (loadfile "JSON.lua")()
-URI = require "uri"
 
 local item_value = os.getenv('item_value')
 local item_dir = os.getenv('item_dir')
@@ -20,20 +19,10 @@ local site = nil
 local site_escaped = nil
 local allowed_archive = {}
 
-if not URI then
-  io.stdout:write("Module URI could not be loaded.")
-  io.stdout:flush()
-  abortgrab = true
-end
-
 for ignore in io.open("ignore-list", "r"):lines() do
   downloaded[ignore] = true
 end
-local _UNRESERVED = "A-Za-z0-9%-._~"
-local _GEN_DELIMS = ":/?#%[%]@"
-local _SUB_DELIMS = "!$&'()*+,;="
-A-Z, a-z, 0-9, -, ., _, ~, :, /, ?, #, [, ], @, !, $, &, ', (, ), *, +, ,, ;, %, and =
-"[^A-Za-z0-9%-%._~:/%?#%[%]@!%$&'%(%)%*%+,;%%%\"=]"
+
 load_json_file = function(file)
   if file then
     return JSON:decode(file)
@@ -54,6 +43,14 @@ read_file = function(file)
 end
 
 allowed = function(url, parenturl)
+  if string.match(url, "^https?://www%.") then
+    url = string.gsub(url, "^(https?://)www%.(.+)$", "%1%2")
+  end
+
+  if parenturl and string.match(parenturl, "^https?://www%.") then
+    parenturl = string.gsub(parenturl, "^(https?://)www%.(.+)$", "%1%2")
+  end
+
   if string.match(url, "'+")
     or string.match(url, "[<>\\%*%$;%^%[%],%(%){}]")
     or string.match(url, "/hovercard$")
@@ -124,7 +121,7 @@ allowed = function(url, parenturl)
     tested[s] = tested[s] + 1
   end
 
-  local match = string.match(url, "^https?://github%.com/[^/]+/[^/]+/[^/]+/?%?q=(.+%%3A.+)")
+  match = string.match(url, "^https?://github%.com/[^/]+/[^/]+/[^/]+/?%?q=(.+%%3A.+)")
   if not match then
     match = string.match(url, "^https?://github%.com/[^/]+/[^/]+/[^/]+/?%?query=(.+%%3A.+)")
   end
@@ -328,6 +325,10 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
           return nil
         end
         site = string.lower(string.match(json_data["homepage"], "^https?://([^/]+)/?$"))
+        local match = string.match(site, "^www%.(.+)$")
+        if match then
+          site = match
+        end
         site_escaped = "^https?://" .. string.gsub(site, "([^%w])", "%%%1")
         check(json_data["homepage"])
       end
