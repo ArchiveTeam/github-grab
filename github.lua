@@ -316,7 +316,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       local a, b = string.match(item_value, "^([^/]+)/(.+)$")
       is_fork = json_data["fork"]
       check("https://github.com/" .. item_value)
-      if json_data["homepage"]
+      if json_data["homepage"] and string.len(json_data["homepage"]) > 0
         and not string.match(json_data["homepage"], "^https?://[^/]*github%.io/.") then
         if string.match(json_data["homepage"], "^https?://[^/]+/.") then
           io.stdout:write("Unsupported homepage found.\n")
