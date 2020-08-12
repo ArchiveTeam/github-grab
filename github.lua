@@ -1,6 +1,7 @@
 dofile("table_show.lua")
 dofile("urlcode.lua")
 JSON = (loadfile "JSON.lua")()
+URI = require "uri"
 
 local item_value = os.getenv('item_value')
 local item_dir = os.getenv('item_dir')
@@ -19,10 +20,20 @@ local site = nil
 local site_escaped = nil
 local allowed_archive = {}
 
+if not URI then
+  io.stdout:write("Module URI could not be loaded.")
+  io.stdout:flush()
+  abortgrab = true
+end
+
 for ignore in io.open("ignore-list", "r"):lines() do
   downloaded[ignore] = true
 end
-
+local _UNRESERVED = "A-Za-z0-9%-._~"
+local _GEN_DELIMS = ":/?#%[%]@"
+local _SUB_DELIMS = "!$&'()*+,;="
+A-Z, a-z, 0-9, -, ., _, ~, :, /, ?, #, [, ], @, !, $, &, ', (, ), *, +, ,, ;, %, and =
+"[^A-Za-z0-9%-%._~:/%?#%[%]@!%$&'%(%)%*%+,;%%%\"=]"
 load_json_file = function(file)
   if file then
     return JSON:decode(file)
@@ -97,7 +108,7 @@ allowed = function(url, parenturl)
       or string.match(url, "^https?://[^/]*githubusercontent%.com/")
       or string.match(url, "^https?://[^/]*github%.io")
       or string.match(url, "^https?://[^/]*amazonaws%.com/")
---      or (site and string.match(string.lower(url), site_escaped))
+      or (site and string.match(string.lower(url), site_escaped))
     ) then
     return false
   end
@@ -155,9 +166,9 @@ allowed = function(url, parenturl)
     end
   end]]
 
---[[  if site and string.lower(string.match(url, "^https?://([^/]+)")) == site then
+  if site and string.lower(string.match(url, "^https?://([^/]+)")) == site then
     return true
-  end]]
+  end
 
   if string.match(url, "^https?://[^/]*githubusercontent%.com/.")
     or string.match(url, "^https?://[^/]+amazonaws%.com/.") then
@@ -278,6 +289,13 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     end
   end
 
+  local function checknewurlsite(newurl)
+    if not site or not string.match(string.lower(url), site_escaped)
+      or not string.match(newurl, "([^A-Za-z0-9%-%._~:/%?#%[%]@!%$&'%(%)%*%+,;%%%\"=])") then
+      checknewurl(newurl)
+    end
+  end
+
   if allowed(url, nil) and status_code == 200
     and not (
       string.match(url, "^https?://codeload%.github%.com/")
@@ -301,7 +319,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       local a, b = string.match(item_value, "^([^/]+)/(.+)$")
       is_fork = json_data["fork"]
       check("https://github.com/" .. item_value)
---[[      if json_data["homepage"]
+      if json_data["homepage"]
         and not string.match(json_data["homepage"], "^https?://[^/]*github%.io/.") then
         if string.match(json_data["homepage"], "^https?://[^/]+/.") then
           io.stdout:write("Unsupported homepage found.\n")
@@ -312,7 +330,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
         site = string.lower(string.match(json_data["homepage"], "^https?://([^/]+)/?$"))
         site_escaped = "^https?://" .. string.gsub(site, "([^%w])", "%%%1")
         check(json_data["homepage"])
-      end]]
+      end
       if string.match(item_value, "^[^/]+/[^%.]+%.github%.io$")
         and string.lower(a) == string.lower(string.match(item_value, "^[^/]+/([^%.]+)")) then
         is_site = true
@@ -330,13 +348,13 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       end
     end
     for newurl in string.gmatch(string.gsub(html, "&quot;", '"'), '([^"]+)') do
-      checknewurl(newurl)
+      checknewurlsite(newurl)
     end
     for newurl in string.gmatch(string.gsub(html, "&#039;", "'"), "([^']+)") do
-      checknewurl(newurl)
+      checknewurlsite(newurl)
     end
     for newurl in string.gmatch(html, ">%s*([^<%s]+)") do
-      checknewurl(newurl)
+      checknewurlsite(newurl)
     end
     for newurl in string.gmatch(html, "href='([^']+)'") do
       checknewshorturl(newurl)
