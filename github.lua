@@ -318,7 +318,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       check("https://github.com/" .. item_value)
       if json_data["homepage"] and string.len(json_data["homepage"]) > 0
         and not string.match(json_data["homepage"], "^https?://[^/]*github%.io/.") then
-        if string.match(json_data["homepage"], "^https?://[^/]+/.") then
+        if not string.match(json_data["homepage"], "^https?://[^/]+/?$") then
           io.stdout:write("Unsupported homepage found.\n")
           io.stdout:flush()
           abortgrab = true
