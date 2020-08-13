@@ -98,7 +98,7 @@ allowed = function(url, parenturl)
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/stargazers/you_know$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/fork$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/search$")
-    or string.match(url, "^https?://api%.github%.com/repos/[^/]+/[^/]+/.")
+    or string.match(url, "^https?://api%.github%.com/")
     or string.match(url, "^https?://avatars[0-9]*%.githubusercontent%.com/")
     or not (
       string.match(url, "^https?://[^/]*github%.com/")
@@ -305,18 +305,41 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     if find then
       latest_hovercard = string.gsub(find, ":", "%%3A")
     end
-    if string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+$")
+    if string.match(url, "^https?://github%.com/[^/]+/[^/%?&]+$") then
+      local match = string.match(html, '<meta%s+name="octolytics%-dimension%-repository_is_fork"%s+content="([^"]+)"%s*/>')
+      if not match then
+        io.stdout:write("Could not find fork information.\n")
+        io.stdout:flush()
+        abortgrab = True
+      end
+      match = string.lower(match)
+      if match == "true" then
+        is_fork = true
+      elseif match == "false" then
+        is_fork = false
+      else
+        io.stdout:write("Invalid value for fork information.\n")
+      end
+      local a, b = string.match(item_value, "^([^/]+)/(.+)$")
+      if string.match(item_value, "^[^/]+/[^%.]+%.github%.io$")
+        and string.lower(a) == string.lower(string.match(item_value, "^[^/]+/([^%.]+)")) then
+        is_site = true
+        check("https://" .. b .. "/")
+      else
+        is_site = false
+        check("https://" .. a .. ".github.io/" .. b .. "/")
+      end
+    elseif string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+$")
       or string.match(url, "^https?://github%.com/[^/]+/[^/]+/issues/[0-9]+$") then
       local num = tonumber(string.match(url, "/([0-9]+)$"))
       for i=1,num do
         checknewshorturl(tostring(i))
       end
-    elseif string.match(url, "^https?://api%.github%.com/repos/") then
+--[[    elseif string.match(url, "^https?://api%.github%.com/repos/") then
       local json_data = load_json_file(html)
-      local a, b = string.match(item_value, "^([^/]+)/(.+)$")
       is_fork = json_data["fork"]
       check("https://github.com/" .. item_value)
---[[      if json_data["homepage"] and string.len(json_data["homepage"]) > 0
+      if json_data["homepage"] and string.len(json_data["homepage"]) > 0
         and not string.match(json_data["homepage"], "^https?://[^/]*github%.io/.") then
         if not string.match(json_data["homepage"], "^https?://[^/]+/?$") then
           io.stdout:write("Unsupported homepage found.\n")
@@ -332,14 +355,6 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
         site_escaped = "^https?://" .. string.gsub(site, "([^%w])", "%%%1")
         check(json_data["homepage"])
       end]]
-      if string.match(item_value, "^[^/]+/[^%.]+%.github%.io$")
-        and string.lower(a) == string.lower(string.match(item_value, "^[^/]+/([^%.]+)")) then
-        is_site = true
-        check("https://" .. b .. "/")
-      else
-        is_site = false
-        check("https://" .. a .. ".github.io/" .. b .. "/")
-      end
     elseif string.match(url, "^https?://github%.com/[^/]+/[^/]+/tags") then
       for s in string.gmatch(html, '<a%s+class="muted%-link"[^>]+href="/[^/]+/[^/]+/releases/tag/([^"]+)">[^<]+<svg[^>]+>%s*<path[^>]+>%s*</path>%s*</svg>%s*Notes%s*</a>') do
         allowed_archive[s] = true
