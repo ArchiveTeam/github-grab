@@ -100,6 +100,7 @@ allowed = function(url, parenturl)
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/search$")
     or string.match(url, "^https?://api%.github%.com/")
     or string.match(url, "^https?://avatars[0-9]*%.githubusercontent%.com/")
+    or string.match(url, "/linked_closing_reference%?reference_location=REPO_ISSUES_INDEX$")
     or not (
       string.match(url, "^https?://[^/]*github%.com/")
       or string.match(url, "^https?://[^/]*githubusercontent%.com/")
@@ -429,22 +430,39 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
   end
   
   if status_code >= 500
-      or (status_code >= 400 and status_code ~= 404 and status_code ~= 451)
+      or (
+        status_code >= 400
+        and status_code ~= 404
+        and status_code ~= 406
+        and status_code ~= 451
+      )
       or status_code  == 0 then
     io.stdout:write("Server returned "..http_stat.statcode.." ("..err.."). Sleeping.\n")
     io.stdout:flush()
     local maxtries = 10
-    if not allowed(url["url"], nil) then
-        maxtries = 2
+    if not allowed(url["url"], nil)
+      or (
+        string.match(url["url"], "^https?://[^/]*amazonaws%.com")
+        and not string.match(url["url"], "^https?://[^/]*github")
+      )
+      or (
+        string.match(url["url"], "^https?://camo%.githubusercontent%.com/")
+        and status_code ~= 0
+      )
+      or (
+        string.match(url["url"], "^https?://[^/]*githubusercontent%.com/")
+        and status_code == 400
+      ) then
+      maxtries = 3
     end
-    if tries > maxtries then
+    if tries >= maxtries then
       io.stdout:write("\nI give up...\n")
       io.stdout:flush()
       tries = 0
-      if allowed(url["url"], nil) then
-        return wget.actions.ABORT
-      else
+      if maxtries == 3 then
         return wget.actions.EXIT
+      else
+        return wget.actions.ABORT
       end
     else
       os.execute("sleep " .. math.floor(math.pow(2, tries)))
