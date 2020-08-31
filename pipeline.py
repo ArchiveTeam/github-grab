@@ -54,7 +54,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20200831.03'
+VERSION = '20200901.01'
 USER_AGENT = 'Archive Team'
 TRACKER_ID = 'github'
 TRACKER_HOST = 'trackerproxy.archiveteam.org'
@@ -121,7 +121,9 @@ class PrepareDirectories(SimpleTask):
         open('%(item_dir)s/%(warc_file_base)s.warc.gz' % item, 'w').close()
         with open('%(item_dir)s/%(warc_file_base)s_data.txt' % item, 'w') as f:
             data = item['item_name'].split(':')
-            f.write(':'.join(['web', str(int(time.time()))] + data[2:]))
+            r = requests.get('http://trackerproxy.archiveteam.org/now')
+            assert r.status_code == 200
+            f.write(':'.join(['web', r.text.split('.')[0]] + data[2:]))
 
 class MoveFiles(SimpleTask):
     def __init__(self):
