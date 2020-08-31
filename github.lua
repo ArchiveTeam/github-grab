@@ -59,8 +59,6 @@ allowed = function(url, parenturl)
     or string.match(url, "/hovercard%?")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/blob/")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/tree/")
-    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/tree%-list/")
-    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/tree%-commit/")
     or (
       string.match(url, "^https?://github%.com/[^/]+/[^/]+/commit/")
       and not string.match(url, "/rollup%?")
