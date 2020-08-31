@@ -15,6 +15,8 @@ local abortgrab = false
 local latest_hovercard = nil
 local is_fork = nil
 local is_site = nil
+local stars = nil
+local forks = nil
 --local site = nil
 --local site_escaped = nil
 local allowed_archive = {}
@@ -59,7 +61,10 @@ allowed = function(url, parenturl)
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/tree/")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/tree%-list/")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/tree%-commit/")
-    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/commit/")
+    or (
+      string.match(url, "^https?://github%.com/[^/]+/[^/]+/commit/")
+      and not string.match(url, "/rollup%?")
+    )
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/branches.")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/commits/")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/commits%?author=")
@@ -139,7 +144,9 @@ allowed = function(url, parenturl)
     and string.match(url, "^https?://github%.com/[^/]+/[^/]+/releases/tag/") then
     if string.match(parenturl, "^https?://github%.com/[^/]+/[^/]+/tags") then
       match = string.match(url, "^https?://github%.com/[^/]+/[^/]+/releases/tag/([^/%?]+)$")
-      if is_fork and not allowed_archive[match] then
+      if (is_fork and not allowed_archive[match])
+        or (stars == 0 and forks == 0 and not is_fork) then
+print(url)
         return false
       end
     else
@@ -322,6 +329,20 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       else
         io.stdout:write("Invalid value for fork information.\n")
       end
+      match = string.match(html, '<a[^>]+href="[^"]+/stargazers">%s*<svg[^>]+>%s*<path[^>]+>%s*</path>%s*</svg>%s*<span%s+class="text%-bold">%s*([0-9]+)%s*</span>')
+      if not match then
+        io.stdout:write("Could not find number of stars.\n")
+        io.stdout:flush()
+        abortgrab = true
+      end
+      stars = tonumber(match)
+      match = string.match(html, '<a[^>]+href="[^"]+/network/members">%s*<svg[^>]+>%s*<path[^>]+>%s*</path>%s*</svg>%s*<span%s+class="text%-bold">%s*([0-9]+)%s*</span>')
+      if not match then
+        io.stdout:write("Could not find number of forks.\n")
+        io.stdout:flush()
+        abortgrab = true
+      end
+      forks = tonumber(match)
       local a, b = string.match(item_value, "^([^/]+)/(.+)$")
       if string.match(item_value, "^[^/]+/[^%.]+%.github%.io$")
         and string.lower(a) == string.lower(string.match(item_value, "^[^/]+/([^%.]+)")) then
