@@ -326,14 +326,14 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       else
         io.stdout:write("Invalid value for fork information.\n")
       end
-      match = string.match(html, '<a[^>]+href="[^"]+/stargazers"[^>]+aria%-label="([0-9]+) users starred this repository">')
+      match = string.match(html, '<a[^>]+href="[^"]+/stargazers"[^>]+aria%-label="([0-9]+) users? starred this repository">')
       if not match then
         io.stdout:write("Could not find number of stars.\n")
         io.stdout:flush()
         abortgrab = true
       end
       stars = tonumber(match)
-      match = string.match(html, '<a[^>]+href="[^"]+/network/members"[^>]+aria%-label="([0-9]+) users forked this repository">')
+      match = string.match(html, '<a[^>]+href="[^"]+/network/members"[^>]+aria%-label="([0-9]+) users? forked this repository">')
       if not match then
         io.stdout:write("Could not find number of forks.\n")
         io.stdout:flush()
