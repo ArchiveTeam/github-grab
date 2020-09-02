@@ -409,6 +409,14 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
   return urls
 end
 
+wget.callbacks.write_to_warc = function(url, http_stat)
+  if http_stat["statcode"] == 429
+    and string.match(url["url"], "^https?://github%.com/") then
+    return false
+  end
+  return true
+end
+
 wget.callbacks.httploop_result = function(url, err, http_stat)
   status_code = http_stat["statcode"]
   
