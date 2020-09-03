@@ -1,36 +1,33 @@
 # encoding=utf8
 import datetime
-from distutils.version import StrictVersion
 import hashlib
 import os.path
 import random
-from seesaw.config import realize, NumberConfigValue
-from seesaw.externalprocess import ExternalProcess
-from seesaw.item import ItemInterpolation, ItemValue
-from seesaw.task import SimpleTask, LimitConcurrent
-from seesaw.tracker import GetItemFromTracker, PrepareStatsForTracker, \
-    UploadWithTracker, SendDoneToTracker
+import re
 import shutil
 import socket
+import string
 import subprocess
 import sys
 import time
-import string
+from distutils.version import StrictVersion
 
+import requests
 import seesaw
 from seesaw.externalprocess import WgetDownload
 from seesaw.pipeline import Pipeline
 from seesaw.project import Project
 from seesaw.util import find_executable
-
-from tornado import httpclient
-
-import requests
+from seesaw.config import realize, NumberConfigValue
+from seesaw.externalprocess import ExternalProcess, RsyncUpload
+from seesaw.item import ItemInterpolation, ItemValue
+from seesaw.task import SimpleTask, LimitConcurrent
+from seesaw.tracker import GetItemFromTracker, PrepareStatsForTracker, \
+    UploadWithTracker, SendDoneToTracker
 import zstandard
 
 if StrictVersion(seesaw.__version__) < StrictVersion('0.8.5'):
     raise Exception('This pipeline needs seesaw version 0.8.5 or higher.')
-
 
 ###########################################################################
 # Find a useful Wget+Lua executable.
@@ -48,24 +45,17 @@ WGET_AT = find_executable(
 if not WGET_AT:
     raise Exception('No usable Wget+At found.')
 
-
 ###########################################################################
 # The version number of this pipeline definition.
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20200902.01'
+VERSION = '20200903.01'
 USER_AGENT = 'Archive Team'
 TRACKER_ID = 'github'
 TRACKER_HOST = 'trackerproxy.archiveteam.org'
 
 
-###########################################################################
-# This section defines project-specific tasks.
-#
-# Simple tasks (tasks that do not need any concurrency) are based on the
-# SimpleTask class and have a process(item) method that is called for
-# each item.
 class CheckIP(SimpleTask):
     def __init__(self):
         SimpleTask.__init__(self, 'CheckIP')
@@ -125,17 +115,54 @@ class PrepareDirectories(SimpleTask):
             assert r.status_code == 200
             f.write(':'.join(['web', r.text.split('.')[0]] + data[2:]))
 
+
 class MoveFiles(SimpleTask):
     def __init__(self):
         SimpleTask.__init__(self, 'MoveFiles')
 
     def process(self, item):
         os.rename('%(item_dir)s/%(warc_file_base)s.warc.zst' % item,
-              '%(data_dir)s/%(warc_file_base)s.%(dict_project)s.%(dict_id)s.warc.zst' % item)
+            '%(data_dir)s/%(warc_file_base)s.%(dict_project)s.%(dict_id)s.warc.zst' % item)
         os.rename('%(item_dir)s/%(warc_file_base)s_data.txt' % item,
-              '%(data_dir)s/%(warc_file_base)s_data.txt' % item)
+            '%(data_dir)s/%(warc_file_base)s_data.txt' % item)
 
         shutil.rmtree('%(item_dir)s' % item)
+
+
+class FindRsyncTarget(SimpleTask):
+    def __init__(self):
+        SimpleTask.__init__(self, 'FindRsyncTarget')
+
+    def process(self, item):
+        while True:
+            try:
+                assert self.find_target(item)
+                item.log_output(str(dict(item)))
+                break
+            except Exception as e:
+                item.log_output('Could not find a rsync target.')
+                item.log_output('Sleeping for 10 seconds.')
+                time.sleep(10)
+
+    def find_target(self, item):
+        r = requests.get('https://{}/{}/upload_targets'
+                         .format(TRACKER_HOST, TRACKER_ID))
+        targets = r.json()
+        random.shuffle(targets)
+        for target in targets:
+            domain = re.search('^[^:]+://([^/:]+)', target).group(1)
+            size = os.path.getsize(
+                '%(data_dir)s/%(warc_file_base)s.%(dict_project)s.%(dict_id)s.warc.zst' % item
+            )
+            r = requests.get('http://{}:3000/'.format(domain), params={
+                'name': item['item_name'],
+                'size': size
+            })
+            if r.json()['accepts']:
+                item['rsync_target'] = target \
+                    .replace(':downloader', item['stats']['downloader'])
+                return True
+        return False
 
 
 def get_hash(filename):
@@ -145,6 +172,7 @@ def get_hash(filename):
 CWD = os.getcwd()
 PIPELINE_SHA1 = get_hash(os.path.join(CWD, 'pipeline.py'))
 LUA_SHA1 = get_hash(os.path.join(CWD, 'github.lua'))
+
 
 def stats_id_function(item):
     d = {
@@ -294,19 +322,18 @@ pipeline = Pipeline(
         id_function=stats_id_function,
     ),
     MoveFiles(),
+    FindRsyncTarget(),
     LimitConcurrent(NumberConfigValue(min=1, max=20, default='2',
         name='shared:rsync_threads', title='Rsync threads',
         description='The maximum number of concurrent uploads.'),
-        UploadWithTracker(
-            'http://%s/%s' % (TRACKER_HOST, TRACKER_ID),
-            downloader=downloader,
-            version=VERSION,
-            files=[
+        RsyncUpload(
+            ItemInterpolation('%(rsync_target)s'),
+            [
                 ItemInterpolation('%(data_dir)s/%(warc_file_base)s.%(dict_project)s.%(dict_id)s.warc.zst'),
                 ItemInterpolation('%(data_dir)s/%(warc_file_base)s_data.txt')
             ],
-            rsync_target_source_path=ItemInterpolation('%(data_dir)s/'),
-            rsync_extra_args=[
+            target_source_path=ItemInterpolation('%(data_dir)s/'),
+            extra_args=[
                 '--recursive',
                 '--partial',
                 '--partial-dir', '.rsync-tmp',
@@ -321,3 +348,4 @@ pipeline = Pipeline(
         stats=ItemValue('stats')
     )
 )
+
