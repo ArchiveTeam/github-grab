@@ -50,7 +50,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20200904.01'
+VERSION = '20200904.02'
 USER_AGENT = 'Archive Team'
 TRACKER_ID = 'github'
 TRACKER_HOST = 'trackerproxy.archiveteam.org'
@@ -137,7 +137,6 @@ class FindRsyncTarget(SimpleTask):
         while True:
             try:
                 assert self.find_target(item)
-                item.log_output(str(dict(item)))
                 break
             except Exception as e:
                 item.log_output('Could not find a rsync target.')
