@@ -6,6 +6,8 @@ local item_value = os.getenv('item_value')
 local item_dir = os.getenv('item_dir')
 local warc_file_base = os.getenv('warc_file_base')
 
+local item_value_low = string.lower(item_value)
+
 local url_count = 0
 local tries = 0
 local downloaded = {}
@@ -179,17 +181,19 @@ allowed = function(url, parenturl)
   end
 
   local a, b = string.match(url, "^https?://([^%.]+)%.github%.io/?([0-9a-zA-Z%-%._]*)")
-  if (not is_site and a and b and a .. "/" .. b == item_value)
-    or (
-      is_site and a and b
-      and string.lower(a) == string.lower(string.match(item_value, "^([^/]+)"))
-    ) then
-    return true
+  if a and b then
+    a = string.lower(a)
+    b = string.lower(b)
+    if (not is_site and a .. "/" .. b == item_value_low)
+      or (is_site and a == string.match(item_value_low, "^([^/]+)")) then
+      return true
+    end
   end
 
   local prev = nil
   for s in string.gmatch(string.gsub(url, "%%2F", "/"), "([0-9a-zA-Z%-%._]+)") do
-    if prev ~= nil and prev .. "/" .. s == item_value then
+    s = string.lower(s)
+    if prev ~= nil and prev .. "/" .. s == item_value_low then
       return true
     end
     prev = s
@@ -230,7 +234,9 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     local origurl = url
     local url = string.match(urla, "^([^#]+)")
     local url_ = string.gsub(string.match(url, "^(.-)%.?$"), "&amp;", "&")
-    local url_ = string.match(url_, "^(.-)/?$")
+    if not string.match(url_, "^https?://[^/]*github%.io/") then
+      local url_ = string.match(url_, "^(.-)/?$")
+    end
     if (downloaded[url_] ~= true and addedtolist[url_] ~= true)
       and allowed(url_, origurl) then
       if string.match(url, "^https?://github%.com/[^/]*/[^/]+/graphs/contributors%-data$")
