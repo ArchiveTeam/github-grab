@@ -104,6 +104,14 @@ allowed = function(url, parenturl)
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/fork$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/search$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/archive/[^/]+%.zip$")
+    or string.match(url, "^https?://github%.com/_render_node/[^/]+/pull_requests/body")
+    or string.match(url, "^https?://github%.com/_render_node/[^/]+/pull_requests/unread_timeline")
+    or string.match(url, "^https?://github%.com/_render_node/[^/]+/pull_requests/commits_partial")
+    or string.match(url, "^https?://github%.com/_render_node/[^/]+/issues/body")
+    or string.match(url, "^https?://github%.com/_render_node/[^/]+/issues/unread_timeline")
+    or string.match(url, "^https?://github%.com/_render_node/[^/]+/timeline/issue_comment")
+    or string.match(url, "^https?://github%.com/_render_node/[^/]+/comments/review_comment")
+    or string.match(url, "^https?://github%.com/_render_node/[^/]+/statuses/combined_branch_status")
     or string.match(url, "^https?://api%.github%.com/")
     or string.match(url, "^https?://avatars[0-9]*%.githubusercontent%.com/")
     or string.match(url, "/linked_closing_reference%?reference_location=REPO_ISSUES_INDEX$")
@@ -126,6 +134,11 @@ allowed = function(url, parenturl)
       return false
     end
     tested[s] = tested[s] + 1
+  end
+
+  if string.match(url, "^https?://github%.com/_render_node/")
+    or string.match(url, "^https?://github%.com/user_content_edits/") then
+    return true
   end
 
   match = string.match(url, "^https?://github%.com/[^/]+/[^/]+/[^/]+/?%?q=(.+%%3A.+)")
@@ -249,7 +262,8 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
         or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pulse_committer_data$")
         or string.match(url, "^https?://github%.com/.+/hovercard%?subject=")
         or string.match(url, "^https?://github%.com/[^/]+/[^/]+/network/meta$")
-        or string.match(url, "^https?://github%.com/[^/]+/[^/]+/network/chunk$") then
+        or string.match(url, "^https?://github%.com/[^/]+/[^/]+/network/chunk$")
+        or string.match(url, "^https?://github%.com/user_content_edits/") then
         table.insert(urls, {
           url=url_,
           headers={["X-Requested-With"]="XMLHttpRequest"}
@@ -317,7 +331,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     if find then
       latest_hovercard = string.gsub(find, ":", "%%3A")
     end
-    if string.match(url, "^https?://github%.com/[^/]+/[^/%?&]+$") then
+    if string.match(url, "^https?://github%.com/[^/]+/[^/%?&]+$") and stars == nil then
       local match = string.match(html, '<meta%s+name="octolytics%-dimension%-repository_is_fork"%s+content="([^"]+)"%s*/>')
       if not match then
         io.stdout:write("Could not find fork information.\n")
