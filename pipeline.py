@@ -1,7 +1,8 @@
 # encoding=utf8
 import datetime
+import functools
 import hashlib
-import os.path
+import os
 import random
 import re
 import shutil
@@ -21,9 +22,10 @@ from seesaw.util import find_executable
 from seesaw.config import realize, NumberConfigValue
 from seesaw.externalprocess import ExternalProcess, RsyncUpload
 from seesaw.item import ItemInterpolation, ItemValue
-from seesaw.task import SimpleTask, LimitConcurrent
+from seesaw.task import SimpleTask, LimitConcurrent, Task
 from seesaw.tracker import GetItemFromTracker, PrepareStatsForTracker, \
     UploadWithTracker, SendDoneToTracker
+from tornado.ioloop import IOLoop
 import zstandard
 
 if StrictVersion(seesaw.__version__) < StrictVersion('0.8.5'):
@@ -50,7 +52,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20200904.03'
+VERSION = '20200909.01'
 USER_AGENT = 'Archive Team'
 TRACKER_ID = 'github'
 TRACKER_HOST = 'trackerproxy.archiveteam.org'
@@ -129,39 +131,73 @@ class MoveFiles(SimpleTask):
         shutil.rmtree('%(item_dir)s' % item)
 
 
-class FindRsyncTarget(SimpleTask):
+class ChooseTargetAndUpload(Task):
     def __init__(self):
-        SimpleTask.__init__(self, 'FindRsyncTarget')
+        Task.__init__(self, 'ChooseTargetAndUpload')
+        self.retry_sleep = 10
+
+    def enqueue(self, item):
+        self.start_item(item)
+        item.log_output('Starting %s for %s\n' % (self, item.description()))
+        self.process(item)
 
     def process(self, item):
-        while True:
-            try:
-                assert self.find_target(item)
-                break
-            except Exception as e:
-                item.log_output('Could not find a rsync target.')
-                item.log_output('Sleeping for 10 seconds.')
-                time.sleep(10)
+        try:
+            target = self.find_target(item)
+            assert target is not None
+        except:
+            item.log_output('Could not get rsync target.')
+            return self.retry(item)
+        inner_task = RsyncUpload(
+            target,
+            [
+                '%(data_dir)s/%(warc_file_base)s.%(dict_project)s.%(dict_id)s.warc.zst' % item,
+                '%(data_dir)s/%(warc_file_base)s_data.txt' % item
+            ],
+            target_source_path='%(data_dir)s/' % item,
+            extra_args=[
+                '--recursive',
+                '--partial',
+                '--partial-dir', '.rsync-tmp',
+                '--min-size', '1',
+                '--no-compress',
+                '--compress-level', '0'
+            ],
+            max_tries=1
+        )
+        inner_task.on_complete_item = lambda task, item: self.complete_item(item)
+        inner_task.on_fail_item = lambda task, item: self.retry(item)
+        inner_task.enqueue(item)
+
+    def retry(self, item):
+        item.log_output('Failed to upload, retrying...')
+        IOLoop.instance().add_timeout(
+            datetime.timedelta(seconds=self.retry_sleep),
+            functools.partial(self.process, item)
+        )
 
     def find_target(self, item):
+        item.log_output('Requesting targets.')
         r = requests.get('https://{}/{}/upload_targets'
                          .format(TRACKER_HOST, TRACKER_ID))
         targets = r.json()
         random.shuffle(targets)
         for target in targets:
+            item.log_output('Trying target {}.'.format(target))
             domain = re.search('^[^:]+://([^/:]+)', target).group(1)
             size = os.path.getsize(
                 '%(data_dir)s/%(warc_file_base)s.%(dict_project)s.%(dict_id)s.warc.zst' % item
             )
-            r = requests.get('http://{}:3000/'.format(domain), params={
-                'name': item['item_name'],
-                'size': size
-            })
+            r = requests.get(
+                'http://{}:3000/'.format(domain),
+                params={
+                    'name': item['item_name'],
+                    'size': size
+                },
+                timeout=3
+            )
             if r.json()['accepts']:
-                item['rsync_target'] = target \
-                    .replace(':downloader', item['stats']['downloader'])
-                return True
-        return False
+                return target.replace(':downloader', item['stats']['downloader'])
 
 
 def get_hash(filename):
@@ -321,26 +357,10 @@ pipeline = Pipeline(
         id_function=stats_id_function,
     ),
     MoveFiles(),
-    FindRsyncTarget(),
     LimitConcurrent(NumberConfigValue(min=1, max=20, default='2',
         name='shared:rsync_threads', title='Rsync threads',
         description='The maximum number of concurrent uploads.'),
-        RsyncUpload(
-            ItemInterpolation('%(rsync_target)s'),
-            [
-                ItemInterpolation('%(data_dir)s/%(warc_file_base)s.%(dict_project)s.%(dict_id)s.warc.zst'),
-                ItemInterpolation('%(data_dir)s/%(warc_file_base)s_data.txt')
-            ],
-            target_source_path=ItemInterpolation('%(data_dir)s/'),
-            extra_args=[
-                '--recursive',
-                '--partial',
-                '--partial-dir', '.rsync-tmp',
-                '--min-size', '1',
-                '--no-compress',
-                '--compress-level', '0'
-            ]
-        ),
+        ChooseTargetAndUpload(),
     ),
     SendDoneToTracker(
         tracker_url='http://%s/%s' % (TRACKER_HOST, TRACKER_ID),
