@@ -1,6 +1,7 @@
 dofile("table_show.lua")
 dofile("urlcode.lua")
 JSON = (loadfile "JSON.lua")()
+local urlparse = require("socket.url")
 
 local item_value = os.getenv('item_value')
 local item_dir = os.getenv('item_dir')
@@ -22,6 +23,12 @@ local forks = nil
 --local site = nil
 --local site_escaped = nil
 local allowed_archive = {}
+
+if not urlparse then
+  io.stdout:write("Could not import socket.url.\n")
+  io.stdout:flush()
+  abortgrab = true
+end
 
 for ignore in io.open("ignore-list", "r"):lines() do
   downloaded[ignore] = true
@@ -232,18 +239,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
   
   downloaded[url] = true
 
-  local function check(urla, headers)
---[[    if string.match(urla, "/hovercard$") then
-      if latest_hovercard == nil then
-        print("No hovercard found...")
-        abortgrab = true
-      end
-      return check(
-        urla ..
-        "?subject=" .. latest_hovercard ..
-        "&current_path=" .. string.gsub(string.match(url, "^https?://[^/]+(/[^%?&]+)"), "/", "%%2F")
-      )
-    end]]
+  local function check(urla)
     local origurl = url
     local url = string.match(urla, "^([^#]+)")
     local url_ = string.gsub(string.match(url, "^(.-)%.?$"), "&amp;", "&")
@@ -252,9 +248,10 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     end
     if (downloaded[url_] ~= true and addedtolist[url_] ~= true)
       and allowed(url_, origurl) then
-      if string.match(url, "^https?://github%.com/[^/]*/[^/]+/graphs/contributors%-data$")
+      if string.match(url, "^https?://github%.com/[^/]+/[^/]+/graphs/contributors%-data$")
         or string.match(url, "^https?://github%.com/[^/]+/[^/]+/graphs/code%-frequency%-data$")
         or string.match(url, "^https?://github%.com/[^/]+/[^/]+/graphs/commit%-activity%-data$")
+        or string.match(url, "^https?://github%.com/[^/]+/[^/]+/graphs/traffic%-data$")
         or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pulse_committer_data/daily$")
         or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pulse_committer_data/weekly$")
         or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pulse_committer_data/monthly$")
@@ -276,29 +273,46 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     end
   end
 
-  local function checknewurl(newurl, headers)
+  local function checknewurl(newurl)
+    if string.match(url, "^https?://[^/]*%.github%.io/")
+      and string.match(newurl, "[^A-Za-z0-9%-%._~:/%?#%[%]@!%$&'%(%)%*%+,;%%%\"=]") then
+      return false
+    end
     if string.match(newurl, "^https?:////") then
-      check(string.gsub(newurl, ":////", "://"), headers)
+      check(string.gsub(newurl, ":////", "://"))
     elseif string.match(newurl, "^https?://") then
-      check(newurl, headers)
+      check(newurl)
     elseif string.match(newurl, "^https?:\\/\\?/") then
-      check(string.gsub(newurl, "\\", ""), headers)
-    elseif string.match(newurl, "^\\/\\/") then
-      check(string.match(url, "^(https?:)") .. string.gsub(newurl, "\\", ""), headers)
-    elseif string.match(newurl, "^//") then
-      check(string.match(url, "^(https?:)") .. newurl, headers)
+      check(string.gsub(newurl, "\\", ""))
     elseif string.match(newurl, "^\\/") then
-      check(string.match(url, "^(https?://[^/]+)") .. string.gsub(newurl, "\\", ""), headers)
+      checknewurl(string.gsub(newurl, "\\", ""))
+    elseif string.match(newurl, "^//") then
+      check(urlparse.absolute(url, newurl))
     elseif string.match(newurl, "^/") then
-      check(string.match(url, "^(https?://[^/]+)") .. newurl, headers)
-    elseif string.match(newurl, "^%./") then
-      checknewurl(string.match(newurl, "^%.(.+)"), headers)
+      check(urlparse.absolute(url, newurl))
+    elseif string.match(newurl, "^%.%./") then
+      if string.match(url, "^https?://[^/]+/[^/]+/") then
+        check(urlparse.absolute(url, newurl))
+      else
+        checknewurl(string.match(newurl, "^%.%.(/.+)$"))
+      end
+    elseif string.match(newurl, "^%./")
+      and newurl ~= "./contributions-spider-graph.js"
+      and newurl ~= "./drag-drop.js"
+      and newurl ~= "./image-crop-element-loader.js"
+      and newurl ~= "./jump-to.js"
+      and newurl ~= "./profile-pins-element.js"
+      and newurl ~= "./randomColor.js"
+      and newurl ~= "./sortable-behavior.js"
+      and newurl ~= "./tweetsodium.js"
+      and newurl ~= "./user-status-submit.js" then
+      check(urlparse.absolute(url, newurl))
     end
   end
 
-  local function checknewshorturl(newurl, headers)
+  local function checknewshorturl(newurl)
     if string.match(newurl, "^%?") then
-      check(string.match(url, "^(https?://[^%?]+)") .. newurl, headers)
+      check(urlparse.absolute(url, newurl))
     elseif not (string.match(newurl, "^https?:\\?/\\?//?/?")
         or string.match(newurl, "^[/\\]")
         or string.match(newurl, "^%./")
@@ -308,7 +322,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
         or string.match(newurl, "^android%-app:")
         or string.match(newurl, "^ios%-app:")
         or string.match(newurl, "^%${")) then
-      check(string.match(url, "^(https?://.+/)") .. newurl, headers)
+      check(urlparse.absolute(url, newurl))
     end
   end
 
@@ -445,21 +459,15 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
   io.stdout:flush()
 
   if status_code >= 300 and status_code <= 399 then
-    local newloc = string.match(http_stat["newloc"], "^([^#]+)")
-    if string.match(newloc, "^//") then
-      newloc = string.match(url["url"], "^(https?:)") .. string.match(newloc, "^//(.+)")
-    elseif string.match(newloc, "^/") then
-      newloc = string.match(url["url"], "^(https?://[^/]+)") .. newloc
-    elseif not string.match(newloc, "^https?://") then
-      newloc = string.match(url["url"], "^(https?://.+/)") .. newloc
-    end
+    local newloc = urlparse.absolute(url["url"], http_stat["newloc"])
     if string.match(url["url"], "^https?://github%.com/[^/]+/[^/]+/releases/download/")
       and not string.match(newloc, "^https?://[^/]*amazonaws%.com/") then
       io.stdout:write("Found bad release download URL.\n")
       io.stdout:flush()
       abortgrab = true
     end
-    if downloaded[newloc] == true or addedtolist[newloc] == true or not allowed(newloc, url["url"]) then
+    if downloaded[newloc] == true or addedtolist[newloc] == true
+      or not allowed(newloc, url["url"]) then
       tries = 0
       return wget.actions.EXIT
     end
@@ -535,3 +543,4 @@ wget.callbacks.before_exit = function(exit_status, exit_status_string)
   end
   return exit_status
 end
+
