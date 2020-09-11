@@ -52,7 +52,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20200909.02'
+VERSION = '20200911.01'
 USER_AGENT = 'Archive Team'
 TRACKER_ID = 'github'
 TRACKER_HOST = 'trackerproxy.archiveteam.org'
@@ -107,8 +107,12 @@ class PrepareDirectories(SimpleTask):
         os.makedirs(dirname)
 
         item['item_dir'] = dirname
-        item['warc_file_base'] = '%s-%s-%s' % (self.warc_prefix, escaped_item_name[:50],
-            time.strftime('%Y%m%d-%H%M%S'))
+        item['warc_file_base'] = '-'.join([
+            self.warc_prefix,
+            escaped_item_name[:45],
+            hashlib.sha1(item_name.encode('utf8')).hexdigest()[:10],
+            time.strftime('%Y%m%d-%H%M%S')
+        ])
 
         open('%(item_dir)s/%(warc_file_base)s.warc.gz' % item, 'w').close()
         with open('%(item_dir)s/%(warc_file_base)s_data.txt' % item, 'w') as f:
