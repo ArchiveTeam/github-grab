@@ -165,7 +165,7 @@ allowed = function(url, parenturl)
     if string.match(parenturl, "^https?://github%.com/[^/]+/[^/]+/tags") then
       match = string.match(url, "^https?://github%.com/[^/]+/[^/]+/releases/tag/([^/%?]+)$")
       if (is_fork and not allowed_archive[match])
-        or (stars == 0 and forks == 0 and not is_fork) then
+        or (stars == 0 and forks == 0 and not is_fork and not allowed_archive[match]) then
         return false
       end
     else
