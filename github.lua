@@ -5,6 +5,7 @@ local urlparse = require("socket.url")
 
 local item_value = os.getenv('item_value')
 local item_dir = os.getenv('item_dir')
+local item_config = os.getenv('item_config')
 local warc_file_base = os.getenv('warc_file_base')
 
 local item_value_low = string.lower(item_value)
@@ -110,7 +111,6 @@ allowed = function(url, parenturl)
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/stargazers/you_know$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/fork$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/search$")
-    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/archive/[^/]+%.zip$")
     or string.match(url, "^https?://github%.com/_render_node/[^/]+/pull_requests/body")
     or string.match(url, "^https?://github%.com/_render_node/[^/]+/pull_requests/unread_timeline")
     or string.match(url, "^https?://github%.com/_render_node/[^/]+/pull_requests/commits_partial")
@@ -122,6 +122,10 @@ allowed = function(url, parenturl)
     or string.match(url, "^https?://api%.github%.com/")
     or string.match(url, "^https?://avatars[0-9]*%.githubusercontent%.com/")
     or string.match(url, "/linked_closing_reference%?reference_location=REPO_ISSUES_INDEX$")
+    or (
+      string.match(url, "^https?://github%.com/[^/]+/[^/]+/archive/[^/]+%.zip$")
+      and item_config ~= "complete"
+    )
     or not (
       string.match(url, "^https?://[^/]*github%.com/")
       or string.match(url, "^https?://[^/]*githubusercontent%.com/")
@@ -161,6 +165,7 @@ allowed = function(url, parenturl)
   end
 
   if parenturl
+    and item_config ~= "complete"
     and string.match(url, "^https?://github%.com/[^/]+/[^/]+/releases/tag/") then
     if string.match(parenturl, "^https?://github%.com/[^/]+/[^/]+/tags") then
       match = string.match(url, "^https?://github%.com/[^/]+/[^/]+/releases/tag/([^/%?]+)$")
@@ -174,6 +179,7 @@ allowed = function(url, parenturl)
   end
 
   if parenturl
+    and item_config ~= "complete"
     and not string.match(parenturl, "^https?://github%.com/[^/]+/[^/]+/releases/tag/")
     and string.match(url, "^https?://github%.com/[^/]+/[^/]+/archive/") then
     return false

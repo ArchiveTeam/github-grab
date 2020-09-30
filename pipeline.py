@@ -56,7 +56,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20200919.02'
+VERSION = '20200930.01'
 USER_AGENT = 'Archive Team'
 TRACKER_ID = 'github'
 TRACKER_HOST = 'trackerproxy.archiveteam.org'
@@ -310,7 +310,7 @@ class WgetArgs(object):
         item['item_value'] = item_value
         item['item_config'] = item_config
 
-        assert item_config == 'initial'
+        assert item_config in ('initial', 'complete')
 
         if item_type == 'web':
             wget_args.extend(['--warc-header', 'github-repo-web: ' + str(item_value)])
