@@ -303,15 +303,17 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
         checknewurl(string.match(newurl, "^%.%.(/.+)$"))
       end
     elseif string.match(newurl, "^%./")
-      and newurl ~= "./contributions-spider-graph.js"
-      and newurl ~= "./drag-drop.js"
-      and newurl ~= "./image-crop-element-loader.js"
-      and newurl ~= "./jump-to.js"
-      and newurl ~= "./profile-pins-element.js"
-      and newurl ~= "./randomColor.js"
-      and newurl ~= "./sortable-behavior.js"
-      and newurl ~= "./tweetsodium.js"
-      and newurl ~= "./user-status-submit.js" then
+      and newurl ~= "./chunk-contributions-spider-graph.js"
+      and newurl ~= "./chunk-drag-drop.js"
+      and newurl ~= "./chunk-image-crop-element-loader.js"
+      and newurl ~= "./chunk-jump-to.js"
+      and newurl ~= "./chunk-profile-pins-element.js"
+      and newurl ~= "./chunk-runner-groups.js"
+      and newurl ~= "./chunk-randomColor.js"
+      and newurl ~= "./chunk-sortable-behavior.js"
+      and newurl ~= "./chunk-tweetsodium.js"
+      and newurl ~= "./chunk-user-status-submit.js"
+      and newurl ~= "./compat.js" then
       check(urlparse.absolute(url, newurl))
     end
   end
