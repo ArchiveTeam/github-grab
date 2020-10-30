@@ -68,7 +68,10 @@ allowed = function(url, parenturl)
     or string.match(url, "/hovercard$")
     or string.match(url, "/hovercard%?")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/blob/")
-    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/tree/")
+    or (
+      string.match(url, "^https?://github%.com/[^/]+/[^/]+/tree/")
+      and item_config ~= "complete"
+    )
     or (
       string.match(url, "^https?://github%.com/[^/]+/[^/]+/commit/")
       and not string.match(url, "/rollup%?")
@@ -150,6 +153,15 @@ allowed = function(url, parenturl)
   if string.match(url, "^https?://github%.com/_render_node/")
     or string.match(url, "^https?://github%.com/user_content_edits/") then
     return true
+  end
+
+  if parenturl
+    and string.match(url, "^https?://github%.com/[^/]+/[^/]+/tree/")
+    and (
+      string.match(parenturl, "^https?://github%.com/[^/]+/[^/]+/tree/")
+      or string.match(parenturl, "^https?://github%.com/[^/]+/[^/]+/file%-list/")
+    ) then
+    return false
   end
 
   match = string.match(url, "^https?://github%.com/[^/]+/[^/]+/[^/]+/?%?q=(.+%%3A.+)")
