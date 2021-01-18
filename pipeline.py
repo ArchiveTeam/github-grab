@@ -57,7 +57,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20201031.02'
+VERSION = '20210119.01'
 USER_AGENT = 'Archive Team'
 TRACKER_ID = 'github'
 TRACKER_HOST = 'trackerproxy.archiveteam.org'
@@ -120,11 +120,7 @@ class PrepareDirectories(SimpleTask):
         ])
 
         open('%(item_dir)s/%(warc_file_base)s.warc.gz' % item, 'w').close()
-        with open('%(item_dir)s/%(warc_file_base)s_data.txt' % item, 'w') as f:
-            data = item['item_name'].split(':')
-            r = requests.get('http://trackerproxy.archiveteam.org/now')
-            assert r.status_code == 200
-            f.write(':'.join(['web', r.text.split('.')[0]] + data[2:]))
+        open('%(item_dir)s/%(warc_file_base)s_data.txt' % item, 'w').close()
 
 
 class MoveFiles(SimpleTask):
@@ -136,8 +132,18 @@ class MoveFiles(SimpleTask):
             '%(data_dir)s/%(warc_file_base)s.%(dict_project)s.%(dict_id)s.warc.zst' % item)
         os.rename('%(item_dir)s/%(warc_file_base)s_data.txt' % item,
             '%(data_dir)s/%(warc_file_base)s_data.txt' % item)
-
         shutil.rmtree('%(item_dir)s' % item)
+
+        data = item['item_name'].split(':')
+        r = requests.get('http://trackerproxy.archiveteam.org/now')
+        assert r.status_code == 200
+        new_item = ':'.join(['web', r.text.split('.')[0]] + data[2:])
+        print('queuing item', new_item)
+        r = requests.post(
+            'http://blackbird-amqp.meo.ws:23038/github-next-pwof1zehtpb56ho/',
+            data=new_item
+        )
+        assert r.status_code == 200
 
 
 class ChooseTargetAndUpload(Task):
