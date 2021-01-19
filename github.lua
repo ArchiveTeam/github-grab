@@ -213,8 +213,15 @@ allowed = function(url, parenturl)
     return true
   end]]
 
-  if string.match(url, "^https?://[^/]*githubusercontent%.com/.")
-    or string.match(url, "^https?://[^/]+amazonaws%.com/.") then
+  if string.match(url, "^https?://[^/]*githubusercontent%.com/.") then
+    return true
+  end
+
+  if string.match(url, "^https?://[^/]+amazonaws%.com/.")
+    and not (
+      parenturl
+      and string.lower(string.match(parenturl, "^https?://(.+)$")) == "github.com/" .. item_value_low
+    ) then
     return true
   end
 
