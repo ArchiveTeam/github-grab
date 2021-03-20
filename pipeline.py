@@ -41,10 +41,6 @@ if StrictVersion(seesaw.__version__) < StrictVersion('0.8.5'):
 WGET_AT = find_executable(
     'Wget+AT',
     [
-        'GNU Wget 1.20.3-at.20200902.01',
-        'GNU Wget 1.20.3-at.20200917.01',
-        'GNU Wget 1.20.3-at.20200919.01',
-        'GNU Wget 1.20.3-at.20201030.01',
         'GNU Wget 1.20.3-at.20210212.02'
     ],
     [
@@ -61,7 +57,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20210203.01'
+VERSION = '20210320.01'
 USER_AGENT = 'Archive Team'
 TRACKER_ID = 'github'
 TRACKER_HOST = 'legacy-api.arpa.li'
@@ -126,7 +122,7 @@ class PrepareDirectories(SimpleTask):
         open('%(item_dir)s/%(warc_file_base)s.warc.gz' % item, 'w').close()
         open('%(item_dir)s/%(warc_file_base)s_data.txt' % item, 'w').close()
 
-        r = requests.get('http://trackerproxy.archiveteam.org/now')
+        r = requests.get('https://legacy-api.arpa.li/now')
         assert r.status_code == 200
         item['start_time'] = r.text.split('.')[0]
 
@@ -249,7 +245,7 @@ class ZstdDict(object):
         if cls.data is not None and time.time() - cls.created < 1800:
             return cls.data
         response = requests.get(
-            'http://trackerproxy.archiveteam.org:25654/dictionary',
+            'https://legacy-api.arpa.li/dictionary',
             params={
                 'project': 'github'
             }
