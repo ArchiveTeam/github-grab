@@ -40,24 +40,23 @@ if StrictVersion(seesaw.__version__) < StrictVersion('0.8.5'):
 
 WGET_AT = find_executable(
     'Wget+AT',
+    ['GNU Wget 1.20.3-at.20210410.01'],
     [
-        'GNU Wget 1.20.3-at.20210212.02'
-    ],
-    [
-         './wget-at',
-         '/home/warrior/data/wget-at'
+        './wget-at',
+        '/home/warrior/data/wget-at'
     ]
 )
 
 if not WGET_AT:
     raise Exception('No usable Wget+At found.')
 
+
 ###########################################################################
 # The version number of this pipeline definition.
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20210320.01'
+VERSION = '20210410.01'
 USER_AGENT = 'Archive Team'
 TRACKER_ID = 'github'
 TRACKER_HOST = 'legacy-api.arpa.li'
