@@ -40,24 +40,23 @@ if StrictVersion(seesaw.__version__) < StrictVersion('0.8.5'):
 
 WGET_AT = find_executable(
     'Wget+AT',
+    ['GNU Wget 1.20.3-at.20210410.01'],
     [
-        'GNU Wget 1.20.3-at.20200902.01',
-        'GNU Wget 1.20.3-at.20200917.01',
-        'GNU Wget 1.20.3-at.20200919.01',
-        'GNU Wget 1.20.3-at.20201030.01'
-    ],
-    ['./wget-at']
+        './wget-at',
+        '/home/warrior/data/wget-at'
+    ]
 )
 
 if not WGET_AT:
     raise Exception('No usable Wget+At found.')
+
 
 ###########################################################################
 # The version number of this pipeline definition.
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20210730.01'
+VERSION = '20210730.02'
 USER_AGENT = 'Archive Team'
 TRACKER_ID = 'github'
 TRACKER_HOST = 'legacy-api.arpa.li'
@@ -122,7 +121,7 @@ class PrepareDirectories(SimpleTask):
         open('%(item_dir)s/%(warc_file_base)s.warc.gz' % item, 'w').close()
         open('%(item_dir)s/%(warc_file_base)s_data.txt' % item, 'w').close()
 
-        r = requests.get('http://legacy-api.arpa.li/now')
+        r = requests.get('https://legacy-api.arpa.li/now')
         assert r.status_code == 200
         item['start_time'] = r.text.split('.')[0]
 
@@ -248,7 +247,7 @@ class ZstdDict(object):
         if cls.data is not None and time.time() - cls.created < 1800:
             return cls.data
         response = requests.get(
-            'http://legacy-api.arpa.li/dictionary',
+            'https://legacy-api.arpa.li/dictionary',
             params={
                 'project': 'github'
             }
