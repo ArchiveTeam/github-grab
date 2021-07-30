@@ -57,10 +57,10 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20210119.03'
+VERSION = '20210730.01'
 USER_AGENT = 'Archive Team'
 TRACKER_ID = 'github'
-TRACKER_HOST = 'trackerproxy.archiveteam.org'
+TRACKER_HOST = 'legacy-api.arpa.li'
 
 
 class CheckIP(SimpleTask):
@@ -122,7 +122,7 @@ class PrepareDirectories(SimpleTask):
         open('%(item_dir)s/%(warc_file_base)s.warc.gz' % item, 'w').close()
         open('%(item_dir)s/%(warc_file_base)s_data.txt' % item, 'w').close()
 
-        r = requests.get('http://trackerproxy.archiveteam.org/now')
+        r = requests.get('http://legacy-api.arpa.li/now')
         assert r.status_code == 200
         item['start_time'] = r.text.split('.')[0]
 
@@ -214,7 +214,10 @@ class ChooseTargetAndUpload(Task):
                 timeout=3
             )
             if r.json()['accepts']:
+                item.log_output('Picking target {}.'.format(target))
                 return target.replace(':downloader', item['stats']['downloader'])
+        else:
+            item.log_output('Could not find a target.')
 
 
 def get_hash(filename):
@@ -245,7 +248,7 @@ class ZstdDict(object):
         if cls.data is not None and time.time() - cls.created < 1800:
             return cls.data
         response = requests.get(
-            'http://trackerproxy.archiveteam.org:25654/dictionary',
+            'http://legacy-api.arpa.li/dictionary',
             params={
                 'project': 'github'
             }

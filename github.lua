@@ -80,10 +80,12 @@ allowed = function(url, parenturl)
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/commits/")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/commits%?author=")
     or string.match(url, "^https?://github%.com/login%?")
+    or string.match(url, "^https?://github%.com/signup%?")
     or string.match(url, "^https?://github%.com/join%?")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/search.*[%?&]l=")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/search.*[%?&]type=")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/compare")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/refs$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/find%-definition$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/find/")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/?$")
@@ -322,6 +324,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
         checknewurl(string.match(newurl, "^%.%.(/.+)$"))
       end
     elseif string.match(newurl, "^%./")
+      and newurl ~= "./chunk-webgl-warp.js"
       and newurl ~= "./chunk-contributions-spider-graph.js"
       and newurl ~= "./chunk-drag-drop.js"
       and newurl ~= "./chunk-image-crop-element-loader.js"
@@ -332,6 +335,32 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       and newurl ~= "./chunk-sortable-behavior.js"
       and newurl ~= "./chunk-tweetsodium.js"
       and newurl ~= "./chunk-user-status-submit.js"
+      and newurl ~= "./chunk-unveil.js"
+      and newurl ~= "./chunk-toast.js"
+      and newurl ~= "./chunk-three.module.js"
+      and newurl ~= "./chunk-severity-calculator-element.js"
+      and newurl ~= "./chunk-series-table.js"
+      and newurl ~= "./chunk-responsive-underlinenav.js"
+      and newurl ~= "./chunk-ref-selector.js"
+      and newurl ~= "./chunk-readme-toc-element.js"
+      and newurl ~= "./chunk-profile.js"
+      and newurl ~= "./chunk-notification-list-focus.js"
+      and newurl ~= "./chunk-metric-selection-element.js"
+      and newurl ~= "./chunk-line-chart.js"
+      and newurl ~= "./chunk-launch-code-element.js"
+      and newurl ~= "./chunk-invitations.js"
+      and newurl ~= "./chunk-insights-query.js"
+      and newurl ~= "./chunk-insights-graph.js"
+      and newurl ~= "./chunk-filter-input.js"
+      and newurl ~= "./chunk-failbot.js"
+      and newurl ~= "./chunk-emoji-picker-element.js"
+      and newurl ~= "./chunk-edit.js"
+      and newurl ~= "./chunk-edit-hook-secret-element.js"
+      and newurl ~= "./chunk-delayed-loading-element.js"
+      and newurl ~= "./chunk-confetti.js"
+      and newurl ~= "./chunk-color-modes.js"
+      and newurl ~= "./chunk-codemirror.js"
+      and newurl ~= "./chunk-animate-on-scroll.js"
       and newurl ~= "./compat.js" then
       check(urlparse.absolute(url, newurl))
     end
