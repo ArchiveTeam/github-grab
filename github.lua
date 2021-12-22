@@ -324,44 +324,8 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
         checknewurl(string.match(newurl, "^%.%.(/.+)$"))
       end
     elseif string.match(newurl, "^%./")
-      and newurl ~= "./chunk-webgl-warp.js"
-      and newurl ~= "./chunk-contributions-spider-graph.js"
-      and newurl ~= "./chunk-drag-drop.js"
-      and newurl ~= "./chunk-image-crop-element-loader.js"
-      and newurl ~= "./chunk-jump-to.js"
-      and newurl ~= "./chunk-profile-pins-element.js"
-      and newurl ~= "./chunk-runner-groups.js"
-      and newurl ~= "./chunk-randomColor.js"
-      and newurl ~= "./chunk-sortable-behavior.js"
-      and newurl ~= "./chunk-tweetsodium.js"
-      and newurl ~= "./chunk-user-status-submit.js"
-      and newurl ~= "./chunk-unveil.js"
-      and newurl ~= "./chunk-toast.js"
-      and newurl ~= "./chunk-three.module.js"
-      and newurl ~= "./chunk-severity-calculator-element.js"
-      and newurl ~= "./chunk-series-table.js"
-      and newurl ~= "./chunk-responsive-underlinenav.js"
-      and newurl ~= "./chunk-ref-selector.js"
-      and newurl ~= "./chunk-readme-toc-element.js"
-      and newurl ~= "./chunk-profile.js"
-      and newurl ~= "./chunk-notification-list-focus.js"
-      and newurl ~= "./chunk-metric-selection-element.js"
-      and newurl ~= "./chunk-line-chart.js"
-      and newurl ~= "./chunk-launch-code-element.js"
-      and newurl ~= "./chunk-invitations.js"
-      and newurl ~= "./chunk-insights-query.js"
-      and newurl ~= "./chunk-insights-graph.js"
-      and newurl ~= "./chunk-filter-input.js"
-      and newurl ~= "./chunk-failbot.js"
-      and newurl ~= "./chunk-emoji-picker-element.js"
-      and newurl ~= "./chunk-edit.js"
-      and newurl ~= "./chunk-edit-hook-secret-element.js"
-      and newurl ~= "./chunk-delayed-loading-element.js"
-      and newurl ~= "./chunk-confetti.js"
-      and newurl ~= "./chunk-color-modes.js"
-      and newurl ~= "./chunk-codemirror.js"
-      and newurl ~= "./chunk-animate-on-scroll.js"
-      and newurl ~= "./compat.js" then
+      and newurl ~= "./compat.js"
+      and not string.match(newurl, "^%./chunk%-.+%.js$") then
       check(urlparse.absolute(url, newurl))
     end
   end
@@ -416,14 +380,14 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       else
         io.stdout:write("Invalid value for fork information.\n")
       end
-      match = string.match(html, '<a[^>]+href="[^"]+/stargazers"[^>]+aria%-label="([0-9]+) users? starred this repository">')
+      match = string.match(html, '<span[^>]+id="repo%-stars%-counter%-star"[^>]+aria%-label="([0-9]+) users? starred this repository"')
       if not match then
         io.stdout:write("Could not find number of stars.\n")
         io.stdout:flush()
         abortgrab = true
       end
       stars = tonumber(match)
-      match = string.match(html, '<a[^>]+href="[^"]+/network/members"[^>]+aria%-label="([0-9]+) users? forked this repository">')
+      match = string.match(html, '<span[^>]+id="repo%-network%-counter"[^>]+title="([0-9]+)"')
       if not match then
         io.stdout:write("Could not find number of forks.\n")
         io.stdout:flush()
