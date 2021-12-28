@@ -128,7 +128,7 @@ allowed = function(url, parenturl)
     or string.match(url, "^https?://avatars[0-9]*%.githubusercontent%.com/")
     or string.match(url, "/linked_closing_reference%?reference_location=REPO_ISSUES_INDEX$")
     or (
-      string.match(url, "^https?://github%.com/[^/]+/[^/]+/archive/[^/]+%.zip$")
+      string.match(url, "^https?://github%.com/[^/]+/[^/]+/archive/refs/tags/[^/]+%.zip$")
       and item_config ~= "complete"
     )
     or not (
@@ -430,10 +430,10 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
         check(json_data["homepage"])
       end]]
     elseif string.match(url, "^https?://github%.com/[^/]+/[^/]+/tags") then
-      for s in string.gmatch(html, '<a%s+class="muted%-link"[^>]+href="/[^/]+/[^/]+/releases/tag/([^"]+)">[^<]+<svg[^>]+>%s*<path[^>]+>%s*</path>%s*</svg>%s*Notes%s*</a>') do
+      for s in string.gmatch(html, '<a%s+class="Link%-%-muted"[^>]+href="/[^/]+/[^/]+/releases/tag/([^"]+)">[^<]+<svg[^>]+>%s*<path[^>]+>%s*</path>%s*</svg>%s*Notes%s*</a>') do
         allowed_archive[s] = true
       end
-      for s in string.gmatch(html, '<a%s+class="muted%-link"[^>]+href="/[^/]+/[^/]+/releases/tag/([^"]+)">[^<]+<svg[^>]+>%s*<path[^>]+>%s*</path>%s*</svg>%s*Downloads%s*</a>') do
+      for s in string.gmatch(html, '<a%s+class="Link%-%-muted"[^>]+href="/[^/]+/[^/]+/releases/tag/([^"]+)">[^<]+<svg[^>]+>%s*<path[^>]+>%s*</path>%s*</svg>%s*Downloads%s*</a>') do
         allowed_archive[s] = true
       end
     end
