@@ -2,6 +2,7 @@ dofile("table_show.lua")
 dofile("urlcode.lua")
 JSON = (loadfile "JSON.lua")()
 local urlparse = require("socket.url")
+local http = require("socket.http")
 
 local item_value = os.getenv('item_value')
 local item_dir = os.getenv('item_dir')
@@ -24,6 +25,7 @@ local forks = nil
 --local site = nil
 --local site_escaped = nil
 local allowed_archive = {}
+local outlinks = {}
 
 if not urlparse then
   io.stdout:write("Could not import socket.url.\n")
@@ -88,6 +90,7 @@ allowed = function(url, parenturl)
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/refs$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/find%-definition$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/find/")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/issue_comments/")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/?$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/[^/]+/?%?direction=.")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/[^/]+/?%?sort=.")
@@ -104,13 +107,25 @@ allowed = function(url, parenturl)
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/runs/[0-9]+/step_summary")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/suites/[0-9]+/show_partial%?check_suite_focus=")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/actions/workflow%-run/[0-9]+$")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/actions/workflows$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/actions/runs/[0-9]+/workflow_run$")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/actions/runs/[0-9]+/[0-9a-zA-Z_]+_partial")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/actions/runs/[0-9]+/graph/job/deploy$")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/actions/runs/[0-9]+/jobs/[0-9]+/steps$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/files")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/checks%?sha=")
-    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/show_partial")
+--    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/show_partial")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/partials/unread_timeline")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/change_base$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/review%-requests")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/commits/[a-f0-9]+")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/discussions/[0-9]+/actions_menu")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/discussions/[0-9]+/timeline%?timeline_last_modified=")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/discussions/[0-9]+%?sort=")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/discussions/[0-9]+/comments/[0-9]+/?$")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/discussions/[0-9]+/comments/[0-9]+/comment_actions_menu")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/discussions/label_suggestions$")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/discussions/author_suggestions$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/wiki/[^/]*/?_history$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/network/dependents%?")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/stargazers/you_know$")
@@ -126,18 +141,28 @@ allowed = function(url, parenturl)
     or string.match(url, "^https?://github%.com/_render_node/[^/]+/statuses/combined_branch_status")
     or string.match(url, "^https?://api%.github%.com/")
     or string.match(url, "^https?://avatars[0-9]*%.githubusercontent%.com/")
+    or string.match(url, "^https?://opengraph%.githubassets%.com/")
     or string.match(url, "/linked_closing_reference%?reference_location=REPO_ISSUES_INDEX$")
     or (
       string.match(url, "^https?://github%.com/[^/]+/[^/]+/archive/refs/tags/[^/]+%.zip$")
       and item_config ~= "complete"
     )
-    or not (
+--[[    or not (
       string.match(url, "^https?://[^/]*github%.com/")
       or string.match(url, "^https?://[^/]*githubusercontent%.com/")
       or string.match(url, "^https?://[^/]*github%.io")
-      or string.match(url, "^https?://[^/]*amazonaws%.com/")
+--      or string.match(url, "^https?://[^/]*amazonaws%.com/")
 --      or (site and string.match(string.lower(url), site_escaped))
-    ) then
+    )]] then
+    return false
+  end
+
+  if not (
+      string.match(url, "^https?://[^/]*github%.com/")
+      or string.match(url, "^https?://[^/]*githubusercontent%.com/")
+      or string.match(url, "^https?://[^/]*github%.io")
+  ) then
+    outlinks[url] = true
     return false
   end
 
@@ -170,8 +195,17 @@ allowed = function(url, parenturl)
   if not match then
     match = string.match(url, "^https?://github%.com/[^/]+/[^/]+/[^/]+/?%?query=(.+%%3A.+)")
   end
+  if not match then
+    match = string.match(url, "^https?://github%.com/[^/]+/[^/]+/[^/]+/?%?discussions_q=(.+%%3A.+)")
+  end
+  if not match then
+    match = string.match(url, "^https?://github%.com/[^/]+/[^/]+/[^/]+/[^/]+/?%?discussions_q=(.+%%3A.+)")
+  end
+  if not match then
+    match = string.match(url, "^https?://github%.com/[^/]+/[^/]+/[^/]+/[^/]+/[^/]+/?%?discussions_q=(.+%%3A.+)")
+  end
   if match then
-    for s in string.gmatch(match, "([a-z%-]+)%%3A") do
+    for s in string.gmatch(match, "([a-z%-]+)%%3[aA]") do
       if s ~= "is" then
         return false
       end
@@ -219,13 +253,13 @@ allowed = function(url, parenturl)
     return true
   end
 
-  if string.match(url, "^https?://[^/]+amazonaws%.com/.")
+--[[  if string.match(url, "^https?://[^/]+amazonaws%.com/.")
     and not (
       parenturl
       and string.lower(string.match(parenturl, "^https?://(.+)$")) == "github.com/" .. item_value_low
     ) then
     return true
-  end
+  end]]
 
   local a, b = string.match(url, "^https?://([^%.]+)%.github%.io/?([0-9a-zA-Z%-%._]*)")
   if a and b then
@@ -331,6 +365,9 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
   end
 
   local function checknewshorturl(newurl)
+    if string.match(newurl, "{{.*}}") then
+      return nil
+    end
     if string.match(newurl, "^%?") then
       check(urlparse.absolute(url, newurl))
     elseif not (string.match(newurl, "^https?:\\?/\\?//?/?")
@@ -358,7 +395,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       string.match(url, "^https?://codeload%.github%.com/")
       or string.match(url, "^https?://github%.com/[^/]+/[^/]+/network/dependents$")
       or string.match(url, "^https?://[^/]*githubusercontent%.com/")
-      or string.match(url, "^https?://[^/]+amazonaws%.com/")
+--      or string.match(url, "^https?://[^/]+amazonaws%.com/")
     ) then
     html = read_file(file)
     find = string.match(html, '<meta[^>]+name="hovercard%-subject%-tag"[^>]+content="([^"]+)"')
@@ -404,7 +441,8 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
         check("https://" .. a .. ".github.io/" .. b .. "/")
       end
     elseif string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+$")
-      or string.match(url, "^https?://github%.com/[^/]+/[^/]+/issues/[0-9]+$") then
+      or string.match(url, "^https?://github%.com/[^/]+/[^/]+/issues/[0-9]+$")
+      or string.match(url, "^https?://github%.com/[^/]+/[^/]+/discussions/[0-9]+$") then
       local num = tonumber(string.match(url, "/([0-9]+)$"))
       for i=1,num do
         checknewshorturl(tostring(i))
@@ -435,6 +473,21 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       end
       for s in string.gmatch(html, '<a%s+class="Link%-%-muted"[^>]+href="/[^/]+/[^/]+/releases/tag/([^"]+)">[^<]+<svg[^>]+>%s*<path[^>]+>%s*</path>%s*</svg>%s*Downloads%s*</a>') do
         allowed_archive[s] = true
+      end
+    end
+    for form in string.gmatch(html, "(<form[^>]+>.-</form>)") do
+      local newurl = string.match(form, '<form[^>]+action="([^"]+)"')
+      newurl = urlparse.absolute(url, newurl)
+      for key, val in string.gmatch(form, '<input[^>]+name="([^"]+)"[^>]+value="([^"]+)"') do
+        if not string.match(newurl, "%?") then
+          newurl = newurl .. "?"
+        else
+          newurl = newurl .. "&"
+        end
+        newurl = newurl .. key .. "=" .. val
+      end
+      if not string.match(form, '<form[^>]+method="[pP][oO][sS][tT]"') then
+        check(newurl)
       end
     end
     for newurl in string.gmatch(string.gsub(html, "&quot;", '"'), '([^"]+)') do
@@ -468,6 +521,9 @@ wget.callbacks.write_to_warc = function(url, http_stat)
     and string.match(url["url"], "^https?://github%.com/") then
     return false
   end
+  if http_stat["statcode"] == 202 then
+    return false
+  end
   return true
 end
 
@@ -480,8 +536,8 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
 
   if status_code >= 300 and status_code <= 399 then
     local newloc = urlparse.absolute(url["url"], http_stat["newloc"])
-    if string.match(url["url"], "^https?://github%.com/[^/]+/[^/]+/releases/download/")
-      and not string.match(newloc, "^https?://[^/]*amazonaws%.com/") then
+    if string.match(url["url"], "^https?://github%.com/[^/]+/[^/]+/releases/download/") then
+--      and not string.match(newloc, "^https?://[^/]*amazonaws%.com/") then
       io.stdout:write("Found bad release download URL.\n")
       io.stdout:flush()
       abortgrab = true
@@ -516,10 +572,10 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
     io.stdout:flush()
     local maxtries = 10
     if not allowed(url["url"], nil)
-      or (
+--[[      or (
         string.match(url["url"], "^https?://[^/]*amazonaws%.com")
         and not string.match(url["url"], "^https?://[^/]*github")
-      )
+      )]]
       or (
         string.match(url["url"], "^https?://camo%.githubusercontent%.com/")
         and status_code ~= 0
@@ -555,6 +611,37 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
   end
 
   return wget.actions.NOTHING
+end
+
+wget.callbacks.finish = function(start_time, end_time, wall_time, numurls, total_downloaded_bytes, total_download_time)
+  local items = nil
+  for item, _ in pairs(outlinks) do
+    print('found outlinks', item)
+    if items == nil then
+      items = item
+    else
+      items = items .. "\0" .. item
+    end
+  end
+  if items ~= nil then
+    local tries = 0
+    while tries < 10 do
+      local body, code, headers, status = http.request(
+        "http://blackbird-amqp.meo.ws:23038/urls-nojvbza3wmwpehp/",
+        items
+      )
+      if code == 200 or code == 409 then
+        break
+      end
+      io.stdout:write("Could not queue items.\n")
+      io.stdout:flush()
+      os.execute("sleep " .. math.floor(math.pow(2, tries)))
+      tries = tries + 1
+    end
+    if tries == 10 then
+      abort_item()
+    end
+  end
 end
 
 wget.callbacks.before_exit = function(exit_status, exit_status_string)
