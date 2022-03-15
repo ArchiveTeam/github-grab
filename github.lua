@@ -627,10 +627,13 @@ wget.callbacks.finish = function(start_time, end_time, wall_time, numurls, total
     local tries = 0
     while tries < 10 do
       local body, code, headers, status = http.request(
-        "http://blackbird-amqp.meo.ws:23038/urls-nojvbza3wmwpehp/",
-        items
+        "https://legacy-api.arpa.li/backfeed/legacy/urls-0w86m3n474oxdzo",
+        items .. "\0"
       )
-      if code == 200 or code == 409 then
+      print(body)
+      if code == 200 then
+        io.stdout:write("Submitted discovered URLs.\n")
+        io.stdout:flush()
         break
       end
       io.stdout:write("Could not queue items.\n")
