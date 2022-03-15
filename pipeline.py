@@ -56,7 +56,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20220315.01'
+VERSION = '20220315.02'
 USER_AGENT = 'Archive Team'
 TRACKER_ID = 'github'
 TRACKER_HOST = 'legacy-api.arpa.li'
@@ -138,13 +138,14 @@ class MoveFiles(SimpleTask):
         shutil.rmtree('%(item_dir)s' % item)
 
         data = item['item_name'].split(':')
-        new_item = ':'.join(['web', item['start_time']] + data[2:])
-        print('Queuing item', new_item)
-        r = requests.post(
-            'http://blackbird-amqp.meo.ws:23038/github-next-pwof1zehtpb56ho/',
-            data=new_item
-        )
-        assert r.status_code == 200
+        if data[1] != 'complete':
+            new_item = ':'.join(['web', item['start_time']] + data[2:])
+            print('Queuing item', new_item)
+            r = requests.post(
+                'https://legacy-api.arpa.li/backfeed/legacy/github-next-0xai7li6e0r4r8t',
+                data=new_item+'\0'
+            )
+            assert r.status_code == 200
 
 
 class ChooseTargetAndUpload(Task):
