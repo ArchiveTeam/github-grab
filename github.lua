@@ -72,7 +72,13 @@ allowed = function(url, parenturl)
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/blob/")
     or (
       string.match(url, "^https?://github%.com/[^/]+/[^/]+/tree/")
-      and item_config ~= "complete"
+      and (
+        item_config ~= "complete"
+        or (
+          parenturl
+          and string.match(parenturl, "^https?://github.com/[^/]+/[^/]+/pull/[0-9]+/commits")
+        )
+      )
     )
     or (
       string.match(url, "^https?://github%.com/[^/]+/[^/]+/commit/")
@@ -96,9 +102,11 @@ allowed = function(url, parenturl)
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/[^/]+/?%?sort=.")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/labels/[^/%?&]+/?$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/projects/issues/[0-9]+$")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/projects/issues/projects_suggestions")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/issues/closing_references")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/issues/[0-9]*/?assignees")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/issues/[0-9]+/set_milestone")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/issues/[0-9]+/edit_form")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pulls/[0-9]+/set_milestone")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pulls/?[^%?]")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/runs/[0-9]+/toolbar")
@@ -116,6 +124,7 @@ allowed = function(url, parenturl)
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/checks%?sha=")
 --    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/show_partial")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/partials/unread_timeline")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/partials/commit_status_icon")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/change_base$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/review%-requests")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/commits/[a-f0-9]+")
@@ -536,7 +545,8 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
 
   if status_code >= 300 and status_code <= 399 then
     local newloc = urlparse.absolute(url["url"], http_stat["newloc"])
-    if string.match(url["url"], "^https?://github%.com/[^/]+/[^/]+/releases/download/") then
+    if string.match(url["url"], "^https?://github%.com/[^/]+/[^/]+/releases/download/")
+      and not string.match(newloc, "^https?://objects%.githubusercontent%.com/") then
 --      and not string.match(newloc, "^https?://[^/]*amazonaws%.com/") then
       io.stdout:write("Found bad release download URL.\n")
       io.stdout:flush()
@@ -547,6 +557,11 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
       tries = 0
       return wget.actions.EXIT
     end
+  end
+
+  if status_code == 403
+    and string.match(url["url"], "^https?://[^/]*github%.com/[^/]+/[^/]+/[^/]+/[^/]+/timeline_more_items%?") then
+    return wget.actions.EXIT
   end
   
   if status_code >= 200 and status_code <= 399 then
