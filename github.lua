@@ -120,6 +120,7 @@ allowed = function(url, parenturl)
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/actions/runs/[0-9]+/[0-9a-zA-Z_]+_partial")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/actions/runs/[0-9]+/graph/job/deploy$")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/actions/runs/[0-9]+/jobs/[0-9]+/steps$")
+    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/actions.*[%?&]query=[^&]+%+[^&]")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/files")
     or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/checks%?sha=")
 --    or string.match(url, "^https?://github%.com/[^/]+/[^/]+/pull/[0-9]+/show_partial")
@@ -433,12 +434,13 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
         abortgrab = true
       end
       stars = tonumber(match)
-      match = string.match(html, '<span[^>]+id="repo%-network%-counter"[^>]+title="([0-9]+)"')
+      match = string.match(html, '<span[^>]+id="repo%-network%-counter"[^>]+title="([,0-9]+)"')
       if not match then
         io.stdout:write("Could not find number of forks.\n")
         io.stdout:flush()
         abortgrab = true
       end
+      match = string.gsub(match, ",", "")
       forks = tonumber(match)
       local a, b = string.match(item_value, "^([^/]+)/(.+)$")
       if string.match(item_value, "^[^/]+/[^%.]+%.github%.io$")
@@ -560,7 +562,10 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
   end
 
   if status_code == 403
-    and string.match(url["url"], "^https?://[^/]*github%.com/[^/]+/[^/]+/[^/]+/[^/]+/timeline_more_items%?") then
+    and (
+      string.match(url["url"], "^https?://[^/]*github%.com/[^/]+/[^/]+/[^/]+/[^/]+/timeline_more_items%?")
+      or string.match(url["url"], "^https?://[^/]*githubusercontent%.com.*/$")
+    ) then
     return wget.actions.EXIT
   end
   
