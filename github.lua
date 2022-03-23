@@ -658,17 +658,25 @@ wget.callbacks.finish = function(start_time, end_time, wall_time, numurls, total
     end
   end
 
-  local items = nil
-  for item, _ in pairs(outlinks) do
-    print('found outlinks', item)
+  local newurls = nil
+  local count = 0
+  local key = "urls-0w86m3n474oxdzo"
+  for newurl, _ in pairs(outlinks) do
+    print('found outlinks', newurl)
     if items == nil then
-      items = item
+      newurls = newurl
     else
-      items = items .. "\0" .. item
+      newurls = newurls .. "\0" .. newurl
+    end
+    count = count + 1
+    if count == 100 then
+      submit_backfeed(newurls, key)
+      newurls = nil
+      count = 0
     end
   end
   if items ~= nil then
-    submit_backfeed(newurls, "urls-0w86m3n474oxdzo")
+    submit_backfeed(newurls, key)
   end
 end
 
