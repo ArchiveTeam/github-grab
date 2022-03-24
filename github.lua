@@ -675,7 +675,7 @@ wget.callbacks.finish = function(start_time, end_time, wall_time, numurls, total
       count = 0
     end
   end
-  if items ~= nil then
+  if newurls ~= nil then
     submit_backfeed(newurls, key)
   end
 end
