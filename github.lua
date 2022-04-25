@@ -663,7 +663,7 @@ wget.callbacks.finish = function(start_time, end_time, wall_time, numurls, total
   local key = "urls-0w86m3n474oxdzo"
   for newurl, _ in pairs(outlinks) do
     print('found outlinks', newurl)
-    if items == nil then
+    if newurls == nil then
       newurls = newurl
     else
       newurls = newurls .. "\0" .. newurl
