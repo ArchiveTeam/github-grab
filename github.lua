@@ -16,6 +16,7 @@ local tries = 0
 local downloaded = {}
 local addedtolist = {}
 local abortgrab = false
+local killgrab = false
 
 local latest_hovercard = nil
 local is_fork = nil
@@ -35,6 +36,11 @@ end
 
 for ignore in io.open("ignore-list", "r"):lines() do
   downloaded[ignore] = true
+end
+
+kill_grab = function(item)
+  io.stdout:write("Aborting crawling.\n")
+  killgrab = true
 end
 
 load_json_file = function(file)
@@ -545,6 +551,10 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
   io.stdout:write(url_count .. "=" .. status_code .. " " .. url["url"] .. "  \n")
   io.stdout:flush()
 
+  if killgrab then
+    return wget.actions.ABORT
+  end
+
   if status_code >= 300 and status_code <= 399 then
     local newloc = urlparse.absolute(url["url"], http_stat["newloc"])
     if string.match(url["url"], "^https?://github%.com/[^/]+/[^/]+/releases/download/")
@@ -638,6 +648,9 @@ wget.callbacks.finish = function(start_time, end_time, wall_time, numurls, total
     local tries = 0
     local maxtries = 4
     while tries < maxtries do
+      if killgrab then
+        return false
+      end
       local body, code, headers, status = http.request(
         "https://legacy-api.arpa.li/backfeed/legacy/" .. key,
         newurls .. "\0"
@@ -654,7 +667,7 @@ wget.callbacks.finish = function(start_time, end_time, wall_time, numurls, total
       tries = tries + 1
     end
     if tries == maxtries then
-      abortgrab = true
+      kill_grab()
     end
   end
 
@@ -681,6 +694,9 @@ wget.callbacks.finish = function(start_time, end_time, wall_time, numurls, total
 end
 
 wget.callbacks.before_exit = function(exit_status, exit_status_string)
+  if killgrab then
+    return wget.exits.IO_FAIL
+  end
   if abortgrab == true then
     return wget.exits.IO_FAIL
   end
