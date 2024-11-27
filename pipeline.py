@@ -218,7 +218,7 @@ class ChooseTargetAndUpload(Task):
                 '%(data_dir)s/%(warc_file_base)s.%(dict_project)s.%(dict_id)s.warc.zst' % item
             )
             r = requests.get(
-                'http://{}:3000/'.format(domain),
+                'https://{}:3000/'.format(domain),
                 params={
                     'name': item['item_name'],
                     'size': size
@@ -363,13 +363,13 @@ project = Project(
     title = 'GitHub',
     project_html = '''
     <img class="project-logo" alt="logo" src="https://www.archiveteam.org/images/2/21/Github-icon.png" height="50px"/>
-    <h2>github.com <span class="links"><a href="https://github.com/">Website</a> &middot; <a href="http://tracker.archiveteam.org/github/">Leaderboard</a></span></h2>
+    <h2>github.com <span class="links"><a href="https://github.com/">Website</a> &middot; <a href="https://tracker.archiveteam.org/github/">Leaderboard</a></span></h2>
     '''
 )
 
 pipeline = Pipeline(
     CheckIP(),
-    GetItemFromTracker('http://%s/%s' % (TRACKER_HOST, TRACKER_ID), downloader,
+    GetItemFromTracker('https://%s/%s' % (TRACKER_HOST, TRACKER_ID), downloader,
         VERSION),
     PrepareDirectories(warc_prefix='github'),
     WgetDownload(
@@ -400,7 +400,7 @@ pipeline = Pipeline(
         ChooseTargetAndUpload(),
     ),
     SendDoneToTracker(
-        tracker_url='http://%s/%s' % (TRACKER_HOST, TRACKER_ID),
+        tracker_url='https://%s/%s' % (TRACKER_HOST, TRACKER_ID),
         stats=ItemValue('stats')
     )
 )
